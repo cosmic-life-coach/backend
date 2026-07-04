@@ -78,6 +78,17 @@ class FirestoreUserRepository:
         except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
             raise ServiceUnavailableError("Firestore", exc) from exc
 
+    def list_uids_with_fcm_token(self) -> list[str]:
+        """
+        Return every uid that has a registered FCM device token.
+        Used by the daily push scheduler to know who can receive notifications.
+        """
+        try:
+            query = self._db.collection("users").where("fcm_token", ">", "")
+            return [doc.id for doc in query.stream()]
+        except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
+            raise ServiceUnavailableError("Firestore", exc) from exc
+
     def get_calendar_credentials(self, uid: str) -> dict | None:
         """Return stored Google Calendar OAuth credentials for this user."""
         try:
