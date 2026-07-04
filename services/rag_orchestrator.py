@@ -135,6 +135,30 @@ class RagOrchestrator:
         vector_id = self._store_exchange(uid, chat_title, user_message, answer, query_embedding)
         return {"answer": answer, "vector_id": vector_id}
 
+    def chart_insights(self, chart_summary: str) -> dict | None:
+        """
+        Generate structured interpretation JSON for a computed chart.
+
+        Gemini interprets (headline, summary, per-placement texts) -- it never
+        computes positions; those come from the Swiss Ephemeris engine.
+        Returns None instead of raising if generation or parsing fails, so a
+        profile save never blocks on the LLM.
+        """
+        import json
+
+        template = get_prompt("prompt_chart_insights.yaml", "system_prompt")
+        try:
+            raw = self._gemini.generate(
+                template.format(birth_chart=chart_summary),
+                "Generate the chart interpretation JSON.",
+            )
+            cleaned = raw.strip().removeprefix("```json").removesuffix("```").strip()
+            parsed = json.loads(cleaned)
+            return parsed if isinstance(parsed, dict) else None
+        except Exception as exc:  # LLM down or malformed JSON -> degrade softly
+            logger.warning("Chart insights generation failed: %s", exc)
+            return None
+
     def daily_recommendation(self, uid: str, calendar_events_text: str) -> str:
         """Generate today's recommendation from chart + calendar context."""
         template = get_prompt("prompt_daily_recommendation.yaml", "system_prompt")

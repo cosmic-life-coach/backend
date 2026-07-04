@@ -78,6 +78,21 @@ class FirestoreUserRepository:
         except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
             raise ServiceUnavailableError("Firestore", exc) from exc
 
+    def get_chart_insights(self, uid: str) -> dict | None:
+        """Return the stored Gemini chart interpretation, if generated."""
+        try:
+            snap = self._user_ref(uid).get()
+        except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
+            raise ServiceUnavailableError("Firestore", exc) from exc
+        return snap.to_dict().get("chart_insights") if snap.exists else None
+
+    def save_chart_insights(self, uid: str, insights: dict) -> None:
+        """Persist the Gemini chart interpretation alongside the profile."""
+        try:
+            self._user_ref(uid).set({"chart_insights": insights}, merge=True)
+        except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
+            raise ServiceUnavailableError("Firestore", exc) from exc
+
     def get_calendar_credentials(self, uid: str) -> dict | None:
         """Return stored Google Calendar OAuth credentials for this user."""
         try:
