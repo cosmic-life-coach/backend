@@ -90,6 +90,14 @@ class FirestoreUserRepository:
         """Persist the Gemini chart interpretation alongside the profile."""
         try:
             self._user_ref(uid).set({"chart_insights": insights}, merge=True)
+    def list_uids_with_fcm_token(self) -> list[str]:
+        """
+        Return every uid that has a registered FCM device token.
+        Used by the daily push scheduler to know who can receive notifications.
+        """
+        try:
+            query = self._db.collection("users").where("fcm_token", ">", "")
+            return [doc.id for doc in query.stream()]
         except (gexc.GoogleAPICallError, gexc.RetryError) as exc:
             raise ServiceUnavailableError("Firestore", exc) from exc
 

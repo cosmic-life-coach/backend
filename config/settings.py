@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     app_env: str = Field(default="local", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
+    # --- Daily recommendation push (FCM) ---
+    daily_push_enabled: bool = Field(default=True, alias="DAILY_PUSH_ENABLED")
+    daily_push_hour_ist: int = Field(
+        default=7, ge=0, le=23, alias="DAILY_PUSH_HOUR_IST",
+        description="Hour of day (Asia/Kolkata) to send the daily push.",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env.local",
         env_file_encoding="utf-8",
