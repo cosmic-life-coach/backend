@@ -16,8 +16,20 @@ class UserProfileRequest(BaseModel):
 
 
 class UserProfileResponse(BaseModel):
-    """Stored profile plus the computed chart summary."""
+    """Stored profile plus the computed chart (structured + text summary)."""
 
     success: bool = True
     profile: UserProfileRequest
     chart_summary: str
+    chart: dict | None = Field(
+        default=None,
+        description="Structured sidereal chart from the Swiss Ephemeris engine: "
+        "ascendant, planets (sign/nakshatra/pada/longitude/retrograde), "
+        "moon_sign, sun_sign. Deterministic -- suitable for chart rendering.",
+    )
+    insights: dict | None = Field(
+        default=None,
+        description="Gemini-generated interpretation JSON (headline, summary, "
+        "per-placement texts). Generated on profile save; None if generation "
+        "failed or the profile predates this feature.",
+    )
