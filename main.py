@@ -73,6 +73,36 @@ def create_app() -> FastAPI:
         """Unauthenticated liveness check for the Flutter client / infra."""
         return {"success": True, "status": "ok", "env": settings.app_env}
 
+    # --- Daily recommendation push (FCM) ---------------------------------
+    # Started via startup hook so it only runs when the server actually
+    # serves (unit tests build the app without firing lifespan events).
+    if settings.daily_push_enabled:
+
+        @app.on_event("startup")
+        async def start_daily_push_scheduler():
+            """Wire the scheduler from the singleton services and start it."""
+            from dependencies import (
+                get_fcm_service,
+                get_rag_orchestrator,
+                get_user_repository,
+            )
+            from services.daily_notification_scheduler import DailyNotificationScheduler
+
+            app.state.daily_scheduler = DailyNotificationScheduler(
+                users=get_user_repository(),
+                rag=get_rag_orchestrator(),
+                fcm=get_fcm_service(),
+                hour_ist=settings.daily_push_hour_ist,
+            )
+            app.state.daily_scheduler.start()
+
+        @app.on_event("shutdown")
+        async def stop_daily_push_scheduler():
+            """Stop cron threads cleanly when the server exits."""
+            scheduler = getattr(app.state, "daily_scheduler", None)
+            if scheduler:
+                scheduler.shutdown()
+
     return app
 
 
