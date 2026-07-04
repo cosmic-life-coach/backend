@@ -13,6 +13,12 @@ class UserProfileRequest(BaseModel):
     lat: float = Field(..., ge=-90, le=90)
     lon: float = Field(..., ge=-180, le=180)
     tz_offset: float = Field(..., ge=-12, le=14, description="UTC offset hours", examples=[5.5])
+    gender: str | None = Field(
+        default=None,
+        pattern="^(Male|Female|Other)$",
+        description="Optional; shown in the app's Edit Profile screen.",
+        examples=["Male"],
+    )
 
 
 class UserProfileResponse(BaseModel):
