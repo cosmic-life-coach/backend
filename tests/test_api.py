@@ -41,8 +41,13 @@ def test_missing_token_returns_envelope(client):
     assert body["error"]["code"] == "MISSING_TOKEN"
 
 
-def test_validation_error_envelope(client):
-    """Bad payload -> 422 VALIDATION_ERROR in the standard envelope."""
+def test_validation_error_envelope(app, client):
+    """Bad payload -> 422 VALIDATION_ERROR in the standard envelope.
+
+    The rag dependency is overridden so the test exercises validation only,
+    not real Gemini/Pinecone client construction.
+    """
+    app.dependency_overrides[dependencies.get_rag_orchestrator] = lambda: FakeRag()
     res = client.post(
         "/api/v1/chat?stream=false",
         json={"chat_title": ""},  # missing message, empty title
@@ -50,6 +55,23 @@ def test_validation_error_envelope(client):
     )
     assert res.status_code == 422
     assert res.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_client_construction_failure_returns_503(app, client):
+    """If an external client can't even be built, respond 503 -- not raw 500."""
+    from utils.error_handlers import ServiceUnavailableError
+
+    def broken_factory():
+        raise ServiceUnavailableError("Gemini", RuntimeError("bad proxy"))
+
+    app.dependency_overrides[dependencies.get_rag_orchestrator] = broken_factory
+    res = client.post(
+        "/api/v1/chat?stream=false",
+        json={"chat_title": "goals", "message": "hi"},
+        headers={"Authorization": "Bearer fake"},
+    )
+    assert res.status_code == 503
+    assert res.json()["error"]["code"] == "SERVICE_UNAVAILABLE"
 
 
 def test_chat_json_mode(app, client):

@@ -25,7 +25,13 @@ class GeminiService:
     def __init__(self):
         """Create the GenAI client with the API key from .env.local."""
         settings = get_settings()
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+        try:
+            self._client = genai.Client(api_key=settings.gemini_api_key)
+        except Exception as exc:
+            # Construction can fail (bad key, proxy/network issues). Surface it
+            # as a clean 503 instead of an unhandled 500 -- and never let it
+            # mask an earlier request-validation error.
+            raise ServiceUnavailableError("Gemini", exc) from exc
         self._model = settings.gemini_model_name
         self._embedding_model = settings.gemini_embedding_model
         self._embedding_dim = settings.gemini_embedding_dimension
