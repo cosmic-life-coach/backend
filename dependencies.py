@@ -34,8 +34,13 @@ def get_user_repository() -> FirestoreUserRepository:
     """Singleton Firestore repository (client created on first use)."""
     from firebase_admin import firestore
 
-    init_firebase()
-    return FirestoreUserRepository(firestore.client())
+    from utils.error_handlers import ServiceUnavailableError
+
+    try:
+        init_firebase()
+        return FirestoreUserRepository(firestore.client())
+    except Exception as exc:  # client construction failure -> clean 503
+        raise ServiceUnavailableError("Firestore", exc) from exc
 
 
 @lru_cache
@@ -43,9 +48,14 @@ def get_memory_handler() -> PineconeMemoryHandler:
     """Singleton Pinecone repository bound to the configured index."""
     from pinecone import Pinecone
 
+    from utils.error_handlers import ServiceUnavailableError
+
     settings = get_settings()
-    pc = Pinecone(api_key=settings.pinecone_api_key)
-    return PineconeMemoryHandler(pc.Index(settings.pinecone_index_name))
+    try:
+        pc = Pinecone(api_key=settings.pinecone_api_key)
+        return PineconeMemoryHandler(pc.Index(settings.pinecone_index_name))
+    except Exception as exc:  # client construction failure -> clean 503
+        raise ServiceUnavailableError("Pinecone", exc) from exc
 
 
 @lru_cache

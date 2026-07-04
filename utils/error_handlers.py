@@ -13,6 +13,7 @@ HTTP 503 with a message naming exactly which service is down.
 import logging
 
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -67,7 +68,7 @@ def register_error_handlers(app: FastAPI) -> None:
             content=error_envelope(
                 code="VALIDATION_ERROR",
                 message="Request payload is invalid.",
-                detail=exc.errors(),
+                detail=jsonable_encoder(exc.errors()),  # ctx may hold raw exceptions
             ),
         )
 
